@@ -56,5 +56,3 @@ jobs:
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
         run: |
           docker push sarusman/myservice:latest
-
-
