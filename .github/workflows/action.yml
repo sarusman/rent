@@ -8,9 +8,9 @@ on:
 
 permissions:
   contents: read
-  security-events: write
   actions: read
   checks: write
+  pull-requests: write
 
 jobs:
   build-and-test:
@@ -21,25 +21,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
         with:
-          distribution: 'temurin'
-          java-version: '21'
-          cache: 'gradle'
+          python-version: '3.12'
 
-      - name: Run Tests
+      - name: Install dependencies
         run: |
-          cd ./MyService
-          chmod +x gradlew
-          ./gradlew test
+          cd MyService
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: |
+          cd MyService
+          pytest tests/ --junitxml=test-results.xml
 
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
           files: |
-            MyService/build/test-results/**/*.xml
+            MyService/test-results.xml
 
       - name: Build Docker image
         run: |

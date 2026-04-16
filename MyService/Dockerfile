@@ -1,13 +1,12 @@
-# Stage 1: Build
-FROM gradle:8.5-jdk21 AS build
-WORKDIR /app
-COPY build.gradle settings.gradle ./
-COPY src ./src
-RUN gradle build --no-daemon -x test
+FROM python:3.12-slim
 
-# Stage 2: Run
-FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=build /app/build/libs/*.jar app.jar
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+
+CMD ["python", "main.py"]
