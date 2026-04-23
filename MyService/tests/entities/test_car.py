@@ -10,7 +10,11 @@ def test_constructeur():
 
 def test_to_dict():
     car = Car("ABC123", "Toyota", 150.0)
-    assert car.to_dict() == {"plate_number": "ABC123", "brand": "Toyota", "price": 150.0}
+    assert car.to_dict() == {
+        "plate_number": "ABC123",
+        "brand": "Toyota",
+        "price": 150.0,
+    }
 
 
 def test_modifier_brand():

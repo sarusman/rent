@@ -32,7 +32,9 @@ def test_creer_reservation_voiture_inexistante(service, car_service):
 
 
 def test_get_reservation(service):
-    created = service.creer_reservation(Reservation("ABC123", "Jean", "2024-01-10", "2024-01-12"))
+    created = service.creer_reservation(
+        Reservation("ABC123", "Jean", "2024-01-10", "2024-01-12")
+    )
     found = service.get_reservation(created.id)
     assert found is not None
     assert found.id == created.id
@@ -44,12 +46,16 @@ def test_get_reservation_not_found(service):
 
 def test_get_reservations(service):
     service.creer_reservation(Reservation("ABC123", "Jean", "2024-01-10", "2024-01-12"))
-    service.creer_reservation(Reservation("ABC123", "Marie", "2024-02-01", "2024-02-05"))
+    service.creer_reservation(
+        Reservation("ABC123", "Marie", "2024-02-01", "2024-02-05")
+    )
     assert len(service.get_reservations()) == 2
 
 
 def test_annuler_reservation(service):
-    created = service.creer_reservation(Reservation("ABC123", "Jean", "2024-01-10", "2024-01-15"))
+    created = service.creer_reservation(
+        Reservation("ABC123", "Jean", "2024-01-10", "2024-01-15")
+    )
     result = service.annuler_reservation(created.id)
     assert result is True
     assert len(service.get_reservations()) == 0
