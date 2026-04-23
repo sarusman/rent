@@ -73,55 +73,49 @@ jobs:
           name: python-coverage
           path: MyService/coverage.xml
 
-  java-build:
-    name: Java Build, Checkstyle & Coverage
+  java-sonar:
+    name: Java Build, Test & SonarCloud
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-
-      - name: Checkstyle, Tests & JaCoCo
-        run: |
-          cd MyService
-          ./gradlew checkstyleMain checkstyleTest test jacocoTestReport
-
-      - name: Upload JaCoCo coverage report
-        uses: actions/upload-artifact@v4
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v4
         with:
-          name: java-coverage
-          path: MyService/build/reports/jacoco/test/jacocoTestReport.xml
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
 
-  sonar:
-    name: SonarCloud Analysis (Python)
-    runs-on: ubuntu-latest
-    needs: [ python-tests ]
-    steps:
-      - uses: actions/checkout@v4
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
         with:
-          fetch-depth: 0
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle
 
-      - name: Download Python coverage
-        uses: actions/download-artifact@v4
-        with:
-          name: python-coverage
-          path: MyService/
+      - name: Make gradlew executable
+        run: chmod +x MyService/gradlew
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v3
+      - name: Checkstyle, Tests, JaCoCo & SonarCloud
+        working-directory: ./MyService
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./gradlew checkstyleMain checkstyleTest test sonar
+
   docker:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
-    needs: [ python-quality, python-tests, java-build ]
+    needs: [ python-quality, python-tests, java-sonar ]
     steps:
       - uses: actions/checkout@v4
 
