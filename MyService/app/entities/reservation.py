@@ -1,5 +1,7 @@
 class Reservation:
-    def __init__(self, plate_number, client_nom, date_debut, date_fin, id=None, prix_total=0.0):
+    def __init__(
+        self, plate_number, client_nom, date_debut, date_fin, id=None, prix_total=0.0
+    ):
         self.id = id
         self.plate_number = plate_number
         self.client_nom = client_nom
