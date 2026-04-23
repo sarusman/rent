@@ -4,6 +4,7 @@ plugins {
 	id 'jacoco'
 	id 'org.springframework.boot' version '3.2.0'
 	id 'io.spring.dependency-management' version '1.1.4'
+	id 'org.sonarqube' version '4.4.1.3373'
 }
 
 group = 'com.example'
@@ -44,4 +45,14 @@ jacocoTestReport {
 tasks.named('test') {
 	useJUnitPlatform()
 	finalizedBy jacocoTestReport
+}
+
+sonarqube {
+	properties {
+		property 'sonar.projectKey', 'sarusman_rent'
+		property 'sonar.organization', 'sarusman'
+		property 'sonar.host.url', 'https://sonarcloud.io'
+		property 'sonar.coverage.jacoco.xmlReportPaths', 'build/reports/jacoco/test/jacocoTestReport.xml'
+		property 'sonar.exclusions', '**/config/**'
+	}
 }
