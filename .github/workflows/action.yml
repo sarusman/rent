@@ -13,16 +13,37 @@ permissions:
   pull-requests: write
 
 jobs:
-  build-and-test:
+
+  python-quality:
+    name: Python Quality (flake8 + black)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install quality tools
+        run: pip install flake8 black
+
+      - name: Lint with flake8
+        run: |
+          cd MyService
+          flake8 app/ tests/
+
+      - name: Check formatting with black
+        run: |
+          cd MyService
+          black --check app/ tests/
+
+  python-tests:
+    name: Python Tests & Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
@@ -31,21 +52,81 @@ jobs:
           cd MyService
           pip install -r requirements.txt
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: |
           cd MyService
-          pytest tests/ --junitxml=test-results.xml
+          pytest tests/ \
+            --junitxml=test-results.xml \
+            --cov=app \
+            --cov-report=xml:coverage.xml \
+            --cov-report=term-missing
 
-      - name: Publish Test Results
+      - name: Publish test results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
-          files: |
-            MyService/test-results.xml
+          files: MyService/test-results.xml
+
+      - name: Upload Python coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-coverage
+          path: MyService/coverage.xml
+
+  java-build:
+    name: Java Build, Checkstyle & Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Checkstyle, Tests & JaCoCo
+        run: |
+          cd MyService
+          ./gradlew checkstyleMain checkstyleTest test jacocoTestReport
+
+      - name: Upload JaCoCo coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-coverage
+          path: MyService/build/reports/jacoco/test/jacocoTestReport.xml
+
+  sonar:
+    name: SonarCloud Analysis (Python)
+    runs-on: ubuntu-latest
+    needs: [ python-tests ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download Python coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: python-coverage
+          path: MyService/
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  docker:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: [ python-quality, python-tests, java-build ]
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Build Docker image
-        run: |
-          docker build -t sarusman/myservice:latest -f MyService/Dockerfile MyService/
+        run: docker build -t sarusman/myservice:latest -f MyService/Dockerfile MyService/
 
       - name: Log in to Docker Hub
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
@@ -54,7 +135,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push Docker image to Docker Hub
+      - name: Push Docker image
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
-        run: |
-          docker push sarusman/myservice:latest
+        run: docker push sarusman/myservice:latest
